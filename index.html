@@ -82,7 +82,17 @@
 <body>
     <h1>Tracker Blocking Test</h1>
     <p class="instructions">This page tests whether tracker blocking is working.</p>
-    
+    <div class="instructions-panel">
+        <h3>How to verify tracker blocking:</h3>
+        <ol>
+            <li>Note how many trackers are blocked with protection ON (shield icon is green)</li>
+            <li>Click the shield icon to turn protection OFF (icon turns red)</li>
+            <li>Reload the page and compare the results</li>
+            <li>You should see fewer trackers blocked when protection is OFF</li>
+        </ol>
+        <p><strong>Note:</strong> Some trackers might still show as blocked even with protection off due to browser security policies.</p>
+    </div>
+
     <div id="trackers-container">
         <!-- Trackers will be added here -->
     </div>
