@@ -1,238 +1,95 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tracker Blocking Test</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            padding: 20px;
-            max-width: 600px;
-            margin: 0 auto;
-            line-height: 1.5;
-        }
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        p.instructions {
-            text-align: center;
-            margin-bottom: 20px;
-            font-style: italic;
-            color: #666;
-        }
-        .tracker-item {
-            margin-bottom: 15px;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .tracker-name {
-            font-weight: bold;
-        }
-        .tracker-category {
-            font-size: 14px;
-            color: #666;
-        }
-        .status {
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-weight: bold;
-            text-align: center;
-            min-width: 80px;
-        }
-        .blocked {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        .loaded {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-        .testing {
-            background-color: #e2e3e5;
-            color: #383d41;
-        }
-        .summary {
-            margin-top: 30px;
-            margin-bottom: 30px;
-            text-align: center;
-            padding: 15px;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 18px;
-        }
-        .good {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        .bad {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-        .neutral {
-            background-color: #e2e3e5;
-            color: #383d41;
-        }
-    </style>
-</head>
-<body>
-    <h1>Tracker Blocking Test</h1>
-    <p class="instructions">This page tests whether tracker blocking is working.</p>
-    <div class="instructions-panel">
-        <h3>How to verify tracker blocking:</h3>
-        <ol>
-            <li>Note how many trackers are blocked with protection ON (shield icon is green)</li>
-            <li>Click the shield icon to turn protection OFF (icon turns red)</li>
-            <li>Reload the page and compare the results</li>
-            <li>You should see fewer trackers blocked when protection is OFF</li>
-        </ol>
-        <p><strong>Note:</strong> Some trackers might still show as blocked even with protection off due to browser security policies.</p>
-    </div>
-
-    <div id="summary" class="summary neutral">
-        Testing tracker blocking...
-    </div>
-
-    <div id="trackers-container">
-        <!-- Trackers will be added here -->
-    </div>
+function testTracker(tracker) {
+    return new Promise(resolve => {
+        const xhr = new XMLHttpRequest();
+        const trackerUrl = `https://${tracker.domain}${tracker.path}`;
+        let completed = false;
         
-    <script>
-        // List of trackers to test with their categories
-        const trackers = [
-            { name: 'Google Analytics', domain: 'www.google-analytics.com', category: 'Analytics', path: '/analytics.js' },
-            { name: 'Facebook Pixel', domain: 'connect.facebook.net', category: 'Social Media', path: '/en_US/fbevents.js' },
-            { name: 'DoubleClick', domain: 'doubleclick.net', category: 'Advertising', path: '/dot.gif' },
-            { name: 'Google Tag Manager', domain: 'www.googletagmanager.com', category: 'Analytics', path: '/gtm.js' },
-            { name: 'Amazon Ads', domain: 'amazon-adsystem.com', category: 'Advertising', path: '/aax2/apstag.js' },
-            { name: 'Twitter Pixel', domain: 'static.ads-twitter.com', category: 'Social Media', path: '/uwt.js' },
-            { name: 'Criteo', domain: 'static.criteo.net', category: 'Advertising', path: '/js/ld/publishertag.js' },
-            { name: 'Scorecard Research', domain: 'sb.scorecardresearch.com', category: 'Analytics', path: '/beacon.js' },
-            { name: 'Hotjar', domain: 'static.hotjar.com', category: 'Analytics', path: '/c/hotjar-' },
-            { name: 'Taboola', domain: 'cdn.taboola.com', category: 'Advertising', path: '/libtrc/unip/tfa.js' }
-        ];
+        // Reduce timeout to make detection more precise
+        const timeout = setTimeout(() => {
+            if (!completed) {
+                completed = true;
+                resolve('blocked');
+            }
+        }, 1500);  // Reduced from 3000ms
         
-        // Create tracker elements
-        function createTrackerElements() {
-            const container = document.getElementById('trackers-container');
-            
-            trackers.forEach(tracker => {
-                const div = document.createElement('div');
-                div.className = 'tracker-item';
-                div.id = `tracker-${tracker.domain.replace(/\./g, '-')}`;
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4 && !completed) {
+                completed = true;
+                clearTimeout(timeout);
                 
-                div.innerHTML = `
-                    <div>
-                        <div class="tracker-name">${tracker.name}</div>
-                        <div class="tracker-category">${tracker.category}</div>
-                    </div>
-                    <div class="status testing">Testing...</div>
-                `;
-                
-                container.appendChild(div);
-            });
-        }
-        
-        // Test if a tracker is blocked
-        function testTracker(tracker) {
-            return new Promise(resolve => {
-                const xhr = new XMLHttpRequest();
-                const trackerUrl = `https://${tracker.domain}${tracker.path}`;
-                let completed = false;
-                
-                // Set a timeout
-                const timeout = setTimeout(() => {
-                    if (!completed) {
-                        completed = true;
-                        resolve('blocked'); // Consider it blocked if it times out
-                    }
-                }, 3000);
-                
-                xhr.onreadystatechange = function() {
-                    if (xhr.readyState === 4 && !completed) {
-                        completed = true;
-                        clearTimeout(timeout);
-                        
-                        if (xhr.status >= 200 && xhr.status < 400) {
-                            resolve('loaded');
-                        } else {
-                            resolve('blocked');
-                        }
-                    }
-                };
-                
-                xhr.onerror = function() {
-                    if (!completed) {
-                        completed = true;
-                        clearTimeout(timeout);
+                // More granular status checking
+                if (xhr.status === 0 || xhr.status >= 400) {
+                    resolve('blocked');
+                } else {
+                    // Additional check: verify response content
+                    const contentLength = xhr.getResponseHeader('Content-Length');
+                    if (!contentLength || parseInt(contentLength) === 0) {
                         resolve('blocked');
-                    }
-                };
-                
-                try {
-                    xhr.open('GET', trackerUrl, true);
-                    xhr.send();
-                } catch (e) {
-                    if (!completed) {
-                        completed = true;
-                        clearTimeout(timeout);
-                        resolve('blocked');
+                    } else {
+                        resolve('loaded');
                     }
                 }
-            });
-        }
+            }
+        };
         
-        // Update the UI with test results
-        function updateTrackerStatus(tracker, status) {
-            const element = document.getElementById(`tracker-${tracker.domain.replace(/\./g, '-')}`);
-            if (!element) return;
-            
-            const statusElement = element.querySelector('.status');
-            statusElement.className = `status ${status}`;
-            statusElement.textContent = status === 'blocked' ? 'Blocked' : 'Loaded';
-        }
+        xhr.onerror = function() {
+            if (!completed) {
+                completed = true;
+                clearTimeout(timeout);
+                resolve('blocked');
+            }
+        };
         
-        // Update the summary
-        function updateSummary(results) {
-            const summary = document.getElementById('summary');
-            const blockedCount = results.filter(r => r === 'blocked').length;
-            const total = results.length;
-            const percentage = Math.round((blockedCount / total) * 100);
+        try {
+            xhr.open('GET', trackerUrl, true);
             
-            if (percentage >= 80) {
-                summary.className = 'summary good';
-                summary.textContent = `Great! ${blockedCount} out of ${total} trackers blocked (${percentage}%)`;
-            } else if (percentage >= 50) {
-                summary.className = 'summary neutral';
-                summary.textContent = `OK: ${blockedCount} out of ${total} trackers blocked (${percentage}%)`;
-            } else {
-                summary.className = 'summary bad';
-                summary.textContent = `Warning: Only ${blockedCount} out of ${total} trackers blocked (${percentage}%)`;
+            // Add headers to simulate real browser behavior
+            xhr.setRequestHeader('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1');
+            xhr.setRequestHeader('Accept', 'application/javascript, */*;q=0.8');
+            xhr.setRequestHeader('Accept-Language', 'en-US,en;q=0.9');
+            
+            // Prevent caching
+            xhr.setRequestHeader('Cache-Control', 'no-cache');
+            
+            xhr.send();
+        } catch (e) {
+            if (!completed) {
+                completed = true;
+                clearTimeout(timeout);
+                resolve('blocked');
             }
         }
+    });
+}
+
+// Optional: Add more detailed logging
+function runTests() {
+    createTrackerElements();
+    
+    const results = [];
+    const detailedResults = [];
+    
+    return Promise.all(trackers.map(async (tracker) => {
+        const result = await testTracker(tracker);
+        updateTrackerStatus(tracker, result);
         
-        // Run all tests
-        async function runTests() {
-            createTrackerElements();
-            
-            const results = [];
-            
-            for (const tracker of trackers) {
-                const result = await testTracker(tracker);
-                updateTrackerStatus(tracker, result);
-                results.push(result);
-            }
-            
-            updateSummary(results);
-        }
+        // Store detailed result for potential future debugging
+        detailedResults.push({
+            name: tracker.name,
+            domain: tracker.domain,
+            result: result,
+            timestamp: new Date().toISOString()
+        });
         
-        // Start tests when page loads
-        window.onload = runTests;
-    </script>
-</body>
-</html>
+        results.push(result);
+        
+        return result;
+    })).then(() => {
+        updateSummary(results);
+        
+        // Optional: Log detailed results to console
+        console.log('Detailed Tracker Test Results:', detailedResults);
+        
+        return results;
+    });
+}
